@@ -11,7 +11,7 @@ from math import sqrt
 # Tokenize an example text
 tokenizer = AutoTokenizer.from_pretrained('zhihan1996/DNA_bert_6')
 text = "ACGTAGCTAGCTAGGCTAACGTAACCGT"
-#print(tokenizer(text, add_special_tokens=False, return_tensors='pt'))
+print(tokenizer(text, add_special_tokens=False, return_tensors='pt'))
 inputs = tokenizer(text, add_special_tokens=False, return_tensors='pt')
 
 # get configuration of the BERT model
@@ -24,7 +24,7 @@ token_embeddings = nn.Embedding(config.vocab_size, config.hidden_size)
 #print(token_embeddings)
 # generate embeddings by feeding in the input IDs
 input_embeds = token_embeddings(inputs.input_ids)
-#print(input_embeds.size()) # This is a tensor of shape [batch_size, seq_len, hidden_dim]
+print(input_embeds.size()) # This is a tensor of shape [batch_size, seq_len, hidden_dim]
 
 # Calculate Attention weights
 query = key = value = input_embeds
@@ -153,8 +153,9 @@ loss_fn = nn.CrossEntropyLoss()
 
 # Dummy data
 inputs = tokenizer(text, add_special_tokens=False, return_tensors='pt')
+print(inputs)
 labels = torch.tensor([1])  # batch_size=1, label=1
-
+print(labels)
 # Move model and data to device (GPU if available)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model = model.to(device)
