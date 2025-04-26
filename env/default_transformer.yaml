@@ -1,0 +1,10 @@
+name: default-transformer-env
+channels:
+  - defaults 
+dependencies: 
+  - python=3.10
+  - pip
+  - pip:
+    - torch
+    - match
+    - transformers
