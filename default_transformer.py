@@ -9,13 +9,13 @@ from torch import nn
 from math import sqrt
 
 # Tokenize an example text
-tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
-text = 'I love data science.'
+tokenizer = AutoTokenizer.from_pretrained('zhihan1996/DNA_bert_6')
+text = "ACGTAGCTAGCTAGGCTAACGTAACCGT"
 #print(tokenizer(text, add_special_tokens=False, return_tensors='pt'))
 inputs = tokenizer(text, add_special_tokens=False, return_tensors='pt')
 
 # get configuration of the BERT model
-config = AutoConfig.from_pretrained('bert-base-uncased')
+config = AutoConfig.from_pretrained('zhihan1996/DNA_bert_6')
 #print(config)
 
 # create dense embeddings
@@ -91,8 +91,6 @@ class FeedForward(nn.Module):
 feed_forward = FeedForward(config)
 ff_outputs = feed_forward(attn_output)
 print(ff_outputs.size())
-# output
-# torch.Size([1, 5, 768])
 
 class EncoderBlock(nn.Module):
     def __init__(self, config):
@@ -154,7 +152,7 @@ optimizer = torch.optim.AdamW(model.parameters(), lr=5e-5)
 loss_fn = nn.CrossEntropyLoss()
 
 # Dummy data
-inputs = tokenizer("I love data science.", add_special_tokens=False, return_tensors='pt')
+inputs = tokenizer(text, add_special_tokens=False, return_tensors='pt')
 labels = torch.tensor([1])  # batch_size=1, label=1
 
 # Move model and data to device (GPU if available)
