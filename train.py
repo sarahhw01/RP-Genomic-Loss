@@ -17,6 +17,7 @@ class SimpleModel(nn.Module):
 
 @hydra.main(config_path="conf", config_name="config", version_base=None)
 def main(cfg: DictConfig):
+    print(cfg)
     # Setup logging
     logger = logging.getLogger(__name__)
     logger.info(f"Running experiment: {cfg.run_name}")
