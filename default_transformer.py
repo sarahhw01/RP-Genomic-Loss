@@ -8,7 +8,7 @@ import torch.utils.data as data
 import math
 import copy
 
-
+# Implement multihead attention layer: computes attention between each pair of positions in a sequence, consists of multiple attention heads
 class MultiHeadAttention(nn.Module):
     def __init__(self, d_model, num_heads):
         super(MultiHeadAttention, self).__init__()
