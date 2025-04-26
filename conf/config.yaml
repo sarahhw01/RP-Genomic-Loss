@@ -1,0 +1,6 @@
+defaults:
+  - model: default_model
+  - train: default_train
+  - dataset: default_dataset
+
+run_name: "test1"

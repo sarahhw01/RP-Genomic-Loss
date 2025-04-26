@@ -8,3 +8,5 @@ dependencies:
     - torch
     - match
     - transformers
+    - hydra-core
+    - omegaconf
