@@ -52,7 +52,8 @@ class AttentionHead(nn.Module):
         attn_outputs = scaled_dot_product_attention(self.q(hidden_state), self.k(hidden_state), self.v(hidden_state))
         return(attn_outputs)
 
-# Multihead attention layer:
+# Multihead attention layer: takes input tensor (hidden_state) and applies multiple attention heads independently, concatenates their outputs and 
+# passes them through a final linear layer
 class MultiHeadAttention(nn.Module):
     def __init__(self, config):
         super().__init__()
@@ -69,4 +70,26 @@ class MultiHeadAttention(nn.Module):
 
 multihead_attn = MultiHeadAttention(config)
 attn_output = multihead_attn(input_embeds)
-print(attn_output.size())
+#print(attn_output.size())
+
+# Implement feed forward layer
+class FeedForward(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        self.linear_1 = nn.Linear(config.hidden_size, config.intermediate_size)
+        self.linear_2 = nn.Linear(config.intermediate_size, config.hidden_size)
+        self.gelu = nn.GELU()
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+    
+    def forward(self, x):
+        x = self.linear_1(x)
+        x = self.gelu(x)
+        x = self.linear_2(x)
+        x = self.dropout(x)
+        return(x)
+
+feed_forward = FeedForward(config)
+ff_outputs = feed_forward(attn_output)
+print(ff_outputs.size())
+# output
+# torch.Size([1, 5, 768])
