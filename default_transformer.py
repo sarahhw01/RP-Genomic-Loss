@@ -93,3 +93,94 @@ ff_outputs = feed_forward(attn_output)
 print(ff_outputs.size())
 # output
 # torch.Size([1, 5, 768])
+
+class EncoderBlock(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        self.attention = MultiHeadAttention(config)
+        self.attention_norm = nn.LayerNorm(config.hidden_size)
+        self.feed_forward = FeedForward(config)
+        self.ffn_norm = nn.LayerNorm(config.hidden_size)
+    
+    def forward(self, hidden_state):
+        # Multi-head attention with residual connection
+        attn_output = self.attention(hidden_state)
+        hidden_state = self.attention_norm(hidden_state + attn_output)
+
+        # Feed forward network with residual connection
+        ffn_output = self.feed_forward(hidden_state)
+        hidden_state = self.ffn_norm(hidden_state + ffn_output)
+        
+        return hidden_state
+
+class TransformerEncoder(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        self.token_embeddings = nn.Embedding(config.vocab_size, config.hidden_size)
+        self.position_embeddings = nn.Embedding(config.max_position_embeddings, config.hidden_size)
+        self.layers = nn.ModuleList([EncoderBlock(config) for _ in range(config.num_hidden_layers)])
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+
+    def forward(self, input_ids):
+        batch_size, seq_length = input_ids.size()
+        position_ids = torch.arange(seq_length, device=input_ids.device).unsqueeze(0).expand(batch_size, -1)
+        
+        # Embed tokens + positions
+        hidden_state = self.token_embeddings(input_ids) + self.position_embeddings(position_ids)
+        hidden_state = self.dropout(hidden_state)
+        
+        for layer in self.layers:
+            hidden_state = layer(hidden_state)
+
+        return hidden_state
+
+class TransformerForClassification(nn.Module):
+    def __init__(self, config, num_classes):
+        super().__init__()
+        self.encoder = TransformerEncoder(config)
+        self.classifier = nn.Linear(config.hidden_size, num_classes)
+    
+    def forward(self, input_ids):
+        hidden_state = self.encoder(input_ids)  # [batch_size, seq_length, hidden_dim]
+        pooled_output = hidden_state[:, 0]  # usually use [CLS] token (index 0)
+        logits = self.classifier(pooled_output)
+        return logits
+    
+# Define model
+model = TransformerForClassification(config, num_classes=2)
+
+# Optimizer and loss
+optimizer = torch.optim.AdamW(model.parameters(), lr=5e-5)
+loss_fn = nn.CrossEntropyLoss()
+
+# Dummy data
+inputs = tokenizer("I love data science.", add_special_tokens=False, return_tensors='pt')
+labels = torch.tensor([1])  # batch_size=1, label=1
+
+# Move model and data to device (GPU if available)
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+model = model.to(device)
+inputs = {k: v.to(device) for k, v in inputs.items()}
+labels = labels.to(device)
+
+# Training loop
+for epoch in range(100):
+    model.train()  # Set model to training mode
+    
+    optimizer.zero_grad()  # Clear gradients
+
+    # Forward pass
+    logits = model(inputs['input_ids'])
+    
+    # Compute loss
+    loss = loss_fn(logits, labels)
+    
+    # Backward pass
+    loss.backward()
+    
+    # Update parameters
+    optimizer.step()
+
+    # Print loss for each epoch
+    print(f"Epoch: {epoch+1}, Loss: {loss.item()}")
+
