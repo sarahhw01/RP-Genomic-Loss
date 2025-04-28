@@ -1,0 +1,57 @@
+# Configuration for 1000 Genomes Project data processing
+
+# Base Directories
+base_dir: "/mnt/c/Users/jules/Documents/PrivateAIM/ResearchProjects/RP-Genomic-Loss"  # Base directory of the project (default: empty = current directory)
+
+# Download Settings
+download:
+  download_1000g: True  # Whether to download 1000 Genomes Project data
+  population: ""  # Population to filter samples (e.g., EUR, AFR, AMR, EAS, SAS or empty "" for all)
+  chromosomes: ["22"] # Comma-separated list of str ["1", "2"] or "all" for all chromosomes
+  max_workers: 5  # Maximum number of parallel downloads
+  extract_samples: False # Whether to extract the samples (one file per sample per chromosome)
+  merge_samples: False  # Whether to merge chromosome VCFs for each sample (requires extract_samples)
+  compress: True # Whether to save the extracted / merged files as bcf
+  n_samples: 1000  # Number of samples to use
+
+reference:
+  download_reference: True
+
+annotations:
+  download_annotations: True
+
+paths:
+  data_dir: "data"  # Directory to download data to
+  chromosomes_dir: "chromosomes"
+  samples_dir: "samples"
+  merged_dir: "merged"  # Directory containing merged VCF files
+  phenotype_csv: "phenotypes.csv"  # Path to phenotype CSV file
+  reference_dir: "reference"  # Path to reference genome and its annotations
+  output_dir: "output/"  # Directory for outputs like logs and reports
+
+dataloader:
+  # Data Configuration
+  data:
+    sample_id_column: "sample"  # Column name in phenotype CSV for patient IDs
+    phenotype_columns: ["pop_numeric","super_pop_numeric","gender_numeric"]  # List of phenotype columns to use (null = use all except sample_id)
+    chunk_size: 4096 # 4096  # Size of genomic sequence chunks to extract
+    chromosomes: ["22"] # Comma-separated list of str ["1", "2"] or "all" for all chromosomes
+    max_indel_length: 50  # Maximum length of insertions/deletions to include
+    cast_to_upper: True  # Cast sequences to uppercase (adapt tokenizer accordingly)
+    skip_n_repeat: True # Skip sequences consisting of only Ns
+
+  batch_size: 4
+  num_workers: 4  # null = use system CPU count
+  pin_memory: True
+  prefetch_factor: 4
+  samples_per_sample: 4
+  shuffle: True
+
+  # Cache Settings
+  cache:
+    use_cache: False  # Whether to use cache for vcf loading
+    cache_size: 500  # Size of LRU cache (number of VCF files per Dataloader worker)
+
+# Logging Configuration
+logging:
+  level: "DEBUG"  # Logging level: DEBUG, INFO, WARNING, ERROR, CRITICAL
