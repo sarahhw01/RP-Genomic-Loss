@@ -119,7 +119,7 @@ def main():
         sys.exit(0)
 
     # Setup reference directory using the path from config
-    reference_dir = os.path.join(base_dir, config["paths"]["reference_dir"])
+    reference_dir = os.path.join(base_dir, config["paths"]["data"], config["paths"]["reference_dir"])
     reference_dir = ensure_dir(reference_dir)
 
     # Setup output directory for logs
