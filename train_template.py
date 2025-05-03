@@ -23,6 +23,7 @@ def main(cfg: DictConfig):
     logger.info(f"Running experiment: {cfg.run_name}")
     logger.info(f"Training config: {cfg.train}")
     logger.info(f"Model config: {cfg.model}")
+    logger.info(f"Loss function: {cfg.lossFunction}")
 
     # Set up output directory (Hydra does this automatically)
     output_dir = os.getcwd()

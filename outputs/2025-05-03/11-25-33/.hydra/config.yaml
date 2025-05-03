@@ -1,0 +1,17 @@
+run_name: test1
+model:
+  name: DNA-BERT
+  hidden_size: 768
+  num_layers: 6
+  num_heads: 8
+  dropout: 0.1
+train:
+  epochs: 100
+  batch_size: 32
+  learning_rate: 2.0e-05
+  log_every: 10
+dataset:
+  train_data_path: data/train.csv
+  test_data_path: data/test.csv
+lossFunction:
+  loss_class: nn.BCEWithLogitsLoss()
