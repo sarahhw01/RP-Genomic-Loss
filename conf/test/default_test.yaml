@@ -1,0 +1,2 @@
+model_dir: "model_Template.pt"
+batch_size: 16

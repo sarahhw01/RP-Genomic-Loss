@@ -4,5 +4,6 @@ defaults:
   - train: default_train
   - dataset: default_dataset
   - lossFunction: default_loss
+  - test: default_test
 
 run_name: "test1"

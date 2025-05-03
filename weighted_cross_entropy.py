@@ -27,7 +27,7 @@ token_to_id = {ch: i for i, ch in enumerate(vocab)}
 target_seq = "ACGTA"
 target_indices = np.array([token_to_id[ch] for ch in target_seq])
 
-# Simulated model probabilities
+# Simulated model probabilities: these would usually be given by the transformer
 probs = np.array([
     [0.9, 0.05, 0.03, 0.02],
     [0.1, 0.8, 0.05, 0.05],
