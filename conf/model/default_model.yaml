@@ -4,4 +4,4 @@ num_layers: 6
 num_heads: 8
 num_classes: 4 # A, C, G, T 
 dropout: 0.1
-seq_len: 10
+seq_len: 50
