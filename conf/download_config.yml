@@ -1,7 +1,7 @@
 # Configuration for 1000 Genomes Project data processing
 
 # Base Directories
-base_dir: "/mnt/c/Users/jules/Documents/PrivateAIM/ResearchProjects/RP-Genomic-Loss"  # Base directory of the project (default: empty = current directory)
+base_dir: "/Users/sarah.hw01/Documents/Master/SS25/RP-Genomic-Loss-1"  # Base directory of the project (default: empty = current directory)
 
 # Download Settings
 download:
