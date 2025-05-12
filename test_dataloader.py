@@ -86,6 +86,7 @@ def test_dataloader(config, num_batches=10, sample_limit=10, token_display=100):
             # Unpack the batch
             (
                 sample_seqs,
+                ref_seqs,
                 phenotypes,
                 exon_mask,
                 repetitive_mask,
@@ -97,7 +98,13 @@ def test_dataloader(config, num_batches=10, sample_limit=10, token_display=100):
             batch_size = sample_seqs.shape[0]
             logging.info(f"Batch {batch_idx+1}: Successfully loaded {batch_size} samples")
             logging.info(f"  Sample sequence shape:    {sample_seqs.shape}")
+            logging.info(f"  Reference sequence shape: {ref_seqs.shape}")
             logging.info(f"  Phenotype vector shape:   {phenotypes.shape}")
+            logging.info(f"  Exon mask shape:          {exon_mask.shape}")
+            logging.info(f"  Repetitive mask shape:    {repetitive_mask.shape}")
+            logging.info(f"  Positions shape:          {positions.shape}")
+            logging.info(f"  Chromosome:               {chrom}")
+
             # Display samples from the batch
             if batch_size > 0:
                 display_samples(batch, tokenizer, min(sample_limit, batch_size), token_display)
@@ -124,7 +131,6 @@ def display_samples(batch, tokenizer, sample_limit, token_display):
     (
         sample_seqs,
         ref_seqs,
-        lookahead_seqs,
         phenotypes,
         exon_mask,
         repetitive_mask,
@@ -143,8 +149,6 @@ def display_samples(batch, tokenizer, sample_limit, token_display):
         token_sample_size = min(token_display, sample_seqs.shape[1])
         sample_seq_sample = sample_seqs[i, :token_sample_size].tolist()
         ref_seq_sample = ref_seqs[i, :token_sample_size].tolist()
-        lookahead_seqs_sample = lookahead_seqs[i, :token_sample_size].tolist()
-
         # Create match mask by comparing sample and reference sequences
         match_mask = [p == r for p, r in zip(sample_seq_sample, ref_seq_sample)]
         match_binary = "".join(["1" if x else "0" for x in match_mask])
@@ -160,7 +164,6 @@ def display_samples(batch, tokenizer, sample_limit, token_display):
         # Get sample and reference sequences
         sample_str = tokenizer.detokenize(sample_seq_sample)
         ref_str = tokenizer.detokenize(ref_seq_sample)
-        lookahead_str = tokenizer.detokenize(lookahead_seqs_sample)
         # Display all information aligned to positions
         logging.info(f"  Alignment information (first {token_sample_size} positions):")
         logging.info(f"  Sample sequence:     {sample_str}")
@@ -168,7 +171,6 @@ def display_samples(batch, tokenizer, sample_limit, token_display):
         logging.info(f"  Match mask:          {match_binary}")
         logging.info(f"  Exon mask:           {exon_binary}")
         logging.info(f"  Repetitive mask:     {repetitive_binary}")
-        logging.info(f"  Lookahead sequence:  {lookahead_str}")
 
         # Calculate match statistics
         match_count = match_mask.count(True)

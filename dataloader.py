@@ -57,19 +57,9 @@ class GenomicIterableDataset(IterableDataset):
         if compressed:
             file_type = "bcf"
 
-        if self.extract_samples:
-            if self.merge_samples:
-                # One merged file per sample
-                self.vcf_data_dir = os.path.join(self.data_dir, merged_dir_rel)
-                self.file_format_pattern = "{sample_id}_merged." + file_type
-            else:
-                # One file per sample per chromosome
-                self.vcf_data_dir = os.path.join(self.data_dir, samples_dir_rel)
-                self.file_format_pattern = "{sample_id}_{chrom}." + file_type
-        else:
-            # One file per chromosome, all samples included
-            self.vcf_data_dir = os.path.join(self.data_dir, chromosomes_dir_rel)
-            self.file_format_pattern = "chr{chrom}.vcf.gz"
+        # One file per chromosome, all samples included
+        self.vcf_data_dir = os.path.join(self.data_dir, chromosomes_dir_rel)
+        self.file_format_pattern = "chr{chrom}.vcf.gz"
 
         logging.info(f"Using VCF data directory: {self.vcf_data_dir}")
         # --- End Directory Selection ---
@@ -99,7 +89,6 @@ class GenomicIterableDataset(IterableDataset):
         self.skip_n_repeat = data_config["skip_n_repeat"]
         self.cast_to_upper = data_config["cast_to_upper"]
         self.max_indel_length = data_config["max_indel_length"]
-        self.burnin_len = data_config["burnin_length"]
 
         self.gap_char = "D"
 
@@ -241,109 +230,47 @@ class GenomicIterableDataset(IterableDataset):
         Regions are planned with margins to allow for random offsets during iteration.
         """
         regions_by_sample = {sample_id: [] for sample_id in self.samples_with_phenotypes}
-        required_chunk_length = self.chunk_size + self.burnin_len
+        required_chunk_length = self.chunk_size
 
-        if self.extract_samples:
-            # Files are organized by sample (either merged or per-chromosome)
-            for sample_id in self.samples_with_phenotypes:
-                for chrom in self.chromosomes:
-                    chrom_len = self.chromosome_lengths.get(chrom)
-                    if not chrom_len:
-                        continue  # Skip if chromosome length unknown
+        for chrom in self.chromosomes:
+            chrom_len = self.chromosome_lengths.get(chrom)
+            if not chrom_len:
+                logging.warning(f"Unknown chromosome: {chrom}")
+                continue
 
-                    if self.merge_samples:
-                        # Expect merged file: {sample_id}_merged.vcf.gz
-                        file_pattern = os.path.join(
-                            self.vcf_data_dir, self.file_format_pattern.format(sample_id=sample_id)
-                        )
-                    else:
-                        # Expect per-chromosome file: {sample_id}_{chrom}.vcf.gz
-                        file_pattern = os.path.join(
-                            self.vcf_data_dir,
-                            self.file_format_pattern.format(sample_id=sample_id, chrom=chrom),
-                        )
+            file_pattern = os.path.join(
+                self.vcf_data_dir, self.file_format_pattern.format(chrom=chrom)
+            )
+            matching_files = glob.glob(file_pattern)
 
-                    # Use glob to find the exact file, handling potential variations
-                    matching_files = glob.glob(file_pattern)
-                    if not matching_files:
-                        logging.warning(f"VCF file not found for pattern: {file_pattern}")
-                        continue
-                    elif len(matching_files) > 1:
-                        logging.warning(
-                            f"Multiple files matched pattern {file_pattern}, using first: {matching_files[0]}"
-                        )
-
-                    file_path = matching_files[0]  # Assume first match is correct
-
-                    # Generate regions for this file/chromosome
-                    # Leave margin for burnin, random offsets and lookahead
-                    available_len = chrom_len - self.burnin_len - self.chunk_size + 1
-
-                    num_regions = max(0, available_len // self.chunk_size)
-                    if chrom_len >= required_chunk_length and num_regions == 0:
-                        num_regions = 1
-                    num_regions = int(num_regions)
-
-                    # If chromosome is shorter than needed do not sample. We only sample if full length is available.
-                    for i in range(num_regions):
-                        start = i * self.chunk_size
-                        # Ensure the region including burnin and lookahead AND potential offset fits within the chromosome
-                        if start + required_chunk_length + (self.chunk_size - 1) <= chrom_len:
-                            regions_by_sample[sample_id].append((file_path, chrom, start))
-                        else:  # debug
-                            logging.debug(
-                                f"Skipping region {chrom}:{start}-{start+required_chunk_length} for sample {sample_id} (len={chrom_len})"
-                            )
-
-                if self.merge_samples and not regions_by_sample[sample_id]:
-                    # Check if the merged file was missing only once
-                    file_pattern = os.path.join(
-                        self.vcf_data_dir, self.file_format_pattern.format(sample_id=sample_id)
-                    )
-                    if not glob.glob(file_pattern):
-                        logging.warning(f"Merged VCF file not found for pattern: {file_pattern}")
-
-        else:
-            # Files are organized by chromosome (extract_samples=False)
-            for chrom in self.chromosomes:
-                chrom_len = self.chromosome_lengths.get(chrom)
-                if not chrom_len:
-                    logging.warning(f"Unknown chromosome: {chrom}")
-                    continue
-
-                file_pattern = os.path.join(
-                    self.vcf_data_dir, self.file_format_pattern.format(chrom=chrom)
+            if not matching_files:
+                logging.warning(f"Chromosome VCF file not found for pattern: {file_pattern}")
+                continue
+            elif len(matching_files) > 1:
+                logging.warning(
+                    f"Multiple files matched chromosome pattern {file_pattern}, using first: {matching_files[0]}"
                 )
-                matching_files = glob.glob(file_pattern)
 
-                if not matching_files:
-                    logging.warning(f"Chromosome VCF file not found for pattern: {file_pattern}")
-                    continue
-                elif len(matching_files) > 1:
-                    logging.warning(
-                        f"Multiple files matched chromosome pattern {file_pattern}, using first: {matching_files[0]}"
-                    )
+            file_path = matching_files[0]
 
-                file_path = matching_files[0]
+            # Generate regions for this chromosome
+            # Modified: Leave margin for random offsets
+            available_len = chrom_len - (self.chunk_size - 1)
+            num_regions = max(0, available_len // self.chunk_size)
 
-                # Generate regions for this chromosome
-                # Modified: Leave margin for random offsets
-                available_len = chrom_len - self.burnin_len - (self.chunk_size - 1)
-                num_regions = max(0, available_len // self.chunk_size)
+            if chrom_len >= required_chunk_length and num_regions == 0:
+                num_regions = 1
 
-                if chrom_len >= required_chunk_length and num_regions == 0:
-                    num_regions = 1
+            num_regions = int(num_regions)
+            regions_for_chrom = []
+            for i in range(num_regions):
+                start = i * self.chunk_size
+                if start + required_chunk_length + (self.chunk_size - 1) <= chrom_len:
+                    regions_for_chrom.append((file_path, chrom, start))
 
-                num_regions = int(num_regions)
-                regions_for_chrom = []
-                for i in range(num_regions):
-                    start = i * self.chunk_size
-                    if start + required_chunk_length + (self.chunk_size - 1) <= chrom_len:
-                        regions_for_chrom.append((file_path, chrom, start))
-
-                # Assign these regions to *each* sample
-                for sample_id in self.samples_with_phenotypes:
-                    regions_by_sample[sample_id].extend(regions_for_chrom)
+            # Assign these regions to *each* sample
+            for sample_id in self.samples_with_phenotypes:
+                regions_by_sample[sample_id].extend(regions_for_chrom)
 
         # Apply samples_per_sample limit and flatten
         final_sampling_plan = []
@@ -471,7 +398,7 @@ class GenomicIterableDataset(IterableDataset):
     ) -> List[Tuple[str, int, str, Tuple[str]]]:
         """
         Extract variants from an open VCF file for a given region using pysam.
-        The VCF handle `vcf` might be pre-filtered for a specific sample if extract_samples=False.
+        Set the sample_id to None to fetch all samples or a specific sample to get only that one.
         """
         variants = []
         ref_chrom = map_chrom_to_ref(chrom)
@@ -516,7 +443,7 @@ class GenomicIterableDataset(IterableDataset):
         reference_seq: str,
         chrom: str,
         start: int,
-        variants: List[Tuple[str, int, str, Tuple[str]]],
+        variants,
     ) -> str:
         """Apply variants to reference sequence."""
         # Convert to mutable list for editing
@@ -534,7 +461,7 @@ class GenomicIterableDataset(IterableDataset):
             while v_chrom < chrom:
                 v_chrom, v_pos, v_ref, v_alts = next(variants)
             while v_pos < start:
-                v_pos, v_ref, v_alts = next(variants)
+                v_chrom, v_pos, v_ref, v_alts = next(variants)
         except StopIteration:
             logging.debug(f"No variants found for {chrom}:{start}-{end}")
             return reference_seq
@@ -569,7 +496,7 @@ class GenomicIterableDataset(IterableDataset):
 
             # Move to the next variant
             try:
-                v_pos, v_ref, v_alts = next(variants)
+                v_chrom, v_pos, v_ref, v_alts = next(variants)
             except StopIteration:
                 break
 
@@ -640,20 +567,18 @@ class GenomicIterableDataset(IterableDataset):
 
                 # 2. Get Reference Sequence (including burn-in)
                 fetch_start = start + random_offset
-                fetch_end = fetch_start + self.chunk_size + self.burnin_len
-                reference_seq_full = self._get_reference_sequence(chrom, fetch_start, fetch_end)
+                fetch_end = fetch_start + self.chunk_size
+                reference_seq = self._get_reference_sequence(chrom, fetch_start, fetch_end)
 
-                if not reference_seq_full:  # Handle error from _get_reference_sequence
+                if not reference_seq:  # Handle error from _get_reference_sequence
                     logging.warning(
                         f"Skipping region {chrom}:{start} for sample {sample_id} due to reference fetch error."
                     )
                     continue
 
                 # 3. Skip if sequence is all 'N's (after potential casting)
-                if self.skip_n_repeat and self._is_n_repeat_sequence(
-                    reference_seq_full[self.burnin_len :]
-                ):
-                    # logging.debug(f"Skipping N-repeat sequence at {chrom}:{start + self.burnin_len}")
+                if self.skip_n_repeat and self._is_n_repeat_sequence(reference_seq):
+                    # logging.debug(f"Skipping N-repeat sequence at {chrom}:{start}")
                     continue
 
                 # 4. Open VCF and Extract Variants for the specific sample/region
@@ -676,7 +601,6 @@ class GenomicIterableDataset(IterableDataset):
                             fetch_end,
                             sample_id,
                         )
-
                 except FileNotFoundError:
                     logging.error(f"VCF file not found at path: {file_path}. Skipping region.")
                     continue
@@ -692,35 +616,32 @@ class GenomicIterableDataset(IterableDataset):
                     continue
 
                 # 5. Apply Variants
-                sample_seq_full = self._apply_variants(
-                    reference_seq_full,
+                sample_seq = self._apply_variants(
+                    reference_seq,
                     chrom,
                     fetch_start,  # Start position of reference_seq_full
                     variants,
                 )
 
-                # 6. Remove Burn-in Region
-                reference_seq = reference_seq_full[self.burnin_len :]
-                sample_seq = sample_seq_full[self.burnin_len :]
-
-                # Ensure sequences have the expected chunk_size length after burn-in removal
+                # 6. Ensure sequences have the expected chunk_size length
+                sample_seq = sample_seq[: self.chunk_size]
                 if len(reference_seq) != self.chunk_size or len(sample_seq) != self.chunk_size:
                     logging.warning(
-                        f"Sequence length mismatch after burn-in removal for {chrom}:{start}. Ref: {len(reference_seq)}, Sample: {len(sample_seq)}. Expected: {self.chunk_size}. Skipping."
+                        f"Sequence length mismatch for {chrom}:{start}. Ref: {len(reference_seq)}, Sample: {len(sample_seq)}. Expected: {self.chunk_size}. Skipping."
                     )
                     # This cloud happen if the chromosome end was reached within the burn-in/chunk.
                     # Should never happen if we created the sampling plan correctly.
                     continue
 
                 # 7. Create Annotation Masks (relative to the final chunk start)
-                mask_start = start + self.burnin_len
                 exon_mask, repetitive_mask = self._create_region_masks(
-                    chrom, mask_start, self.chunk_size  # Length is chunk_size
+                    chrom, start, self.chunk_size  # Length is chunk_size
                 )
 
                 # 8. Tokenize (if tokenizer provided)
                 if self.tokenizer is not None:
                     try:
+                        tokenized_ref = self.tokenizer.tokenize(reference_seq)
                         tokenized_sample = self.tokenizer.tokenize(sample_seq)
                     except Exception as e:
                         logging.error(
@@ -731,8 +652,8 @@ class GenomicIterableDataset(IterableDataset):
                 # 9. Create Position Tensor (relative position within chromosome)
                 # Position corresponds to the start of the chunk after burn-in
                 position_indices = torch.arange(
-                    start + self.burnin_len,
-                    start + self.burnin_len + self.chunk_size,
+                    start,
+                    start + self.chunk_size,
                     dtype=torch.float32,
                 )
                 position = position_indices / self.chromosome_lengths[chrom]
@@ -740,6 +661,7 @@ class GenomicIterableDataset(IterableDataset):
                 # 10. Yield Data Tuple
                 yield (
                     torch.tensor(tokenized_sample),
+                    torch.tensor(tokenized_ref),
                     phenotype_vector,
                     torch.tensor(exon_mask, dtype=torch.bool),
                     torch.tensor(repetitive_mask, dtype=torch.bool),
@@ -766,6 +688,7 @@ def _collate_fn(batch):
     """
     (
         sample_seqs,
+        ref_seqs,
         phenotypes,
         exon_masks,
         repetitive_masks,
@@ -773,6 +696,7 @@ def _collate_fn(batch):
         chrom,
     ) = zip(*batch)
     batched_sample_seqs = torch.stack(sample_seqs)
+    batched_ref_seqs = torch.stack(ref_seqs)
     batched_phenotypes = torch.stack(phenotypes)
     batched_exon_masks = torch.stack(exon_masks)
     batched_repetitive_masks = torch.stack(repetitive_masks)
@@ -780,6 +704,7 @@ def _collate_fn(batch):
 
     return (
         batched_sample_seqs,
+        batched_ref_seqs,
         batched_phenotypes,
         batched_exon_masks,
         batched_repetitive_masks,
