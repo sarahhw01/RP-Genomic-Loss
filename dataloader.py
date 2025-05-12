@@ -740,7 +740,7 @@ def create_genomic_dataloader(config, tokenizer=None):
         batch_size=dataloader_config["batch_size"],
         num_workers=num_workers,
         pin_memory=dataloader_config["pin_memory"],
-        prefetch_factor=dataloader_config["prefetch_factor"],
+        prefetch_factor=None,
         persistent_workers=(num_workers > 0),
         collate_fn=_collate_fn,
     )
