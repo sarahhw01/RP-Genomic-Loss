@@ -42,7 +42,7 @@ dataloader:
 
   batch_size: 4
   num_workers: 4  # null = use system CPU count
-  pin_memory: True
+  pin_memory: False
   prefetch_factor: 4
   samples_per_sample: 4
   shuffle: True
