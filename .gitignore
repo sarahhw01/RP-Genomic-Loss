@@ -1,8 +1,7 @@
 # Outputs of training runs
 outputs/*
 model*
-output/*
-data/*
+data/
 
 *.log
 *.tmp
