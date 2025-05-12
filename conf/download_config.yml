@@ -39,6 +39,7 @@ dataloader:
     max_indel_length: 50  # Maximum length of insertions/deletions to include
     cast_to_upper: True  # Cast sequences to uppercase (adapt tokenizer accordingly)
     skip_n_repeat: True # Skip sequences consisting of only Ns
+    burnin_length: 8192
 
   batch_size: 4
   num_workers: 4  # null = use system CPU count
