@@ -10,7 +10,7 @@ dataloader = create_genomic_dataloader(gconfig, tokenizer)
 
 for batch in dataloader:
     print(batch)
-    sample_seqs, phenotypes, exon_masks, rep_masks, positions, chroms = batch
+    sample_seqs, ref_seqs, phenotypes, exon_masks, rep_masks, positions, chroms = batch
     # sample_seqs: [batch_size, chunk_size]
     # phenotypes: [batch_size, num_phenotypes]
     # masks and positions aligned to sequences
