@@ -7,6 +7,9 @@ import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 from transformers import BertTokenizerFast, BertForSequenceClassification
 from torch.optim import AdamW
+from utils import load_config  # pointing to conf/download_conf.yml
+from tokenizer import NTLevelTokenizer
+from dataloader import create_genomic_dataloader
 
 # 1. Custom Dataset
 class DNADataset(Dataset):
@@ -36,7 +39,7 @@ class DNADataset(Dataset):
         return {
             'input_ids': encoded['input_ids'].squeeze(),
             'attention_mask': encoded['attention_mask'].squeeze(),
-            'labels': torch.tensor(label, dtype=torch.long)
+            'labels': label
         }
 
 # 2. Load tokenizer and model (use pre-trained DNA-BERT)
@@ -72,6 +75,35 @@ def train_model(model, dataloader, epochs=3, lr=2e-5):
             total_loss += loss.item()
         print(f"Epoch {epoch+1}/{epochs} - Loss: {total_loss/len(dataloader):.4f}")
 
+def tokens_to_sequence(token_tensor, id_to_base):
+    """
+    Converts a 1D tensor of token ids into a nucleotide string.
+
+    Args:
+        token_tensor: torch.Tensor of shape (sequence_length,)
+        id_to_base: dict mapping int token -> str base (e.g. {0:'A',1:'C',...})
+
+    Returns:
+        str: nucleotide sequence
+    """
+    return ''.join(id_to_base.get(token.item(), 'N') for token in token_tensor)
+
+def batch_tokens_to_sequences(batch_tensor, id_to_base):
+    """
+    Converts a batch of token ids to list of nucleotide strings.
+
+    Args:
+        batch_tensor: torch.Tensor of shape (batch_size, sequence_length)
+        id_to_base: dict mapping int token -> str base
+
+    Returns:
+        List[str]: list of nucleotide sequences
+    """
+    sequences = []
+    for seq_tensor in batch_tensor:
+        seq_str = tokens_to_sequence(seq_tensor, id_to_base)
+        sequences.append(seq_str)
+    return sequences
     
 @hydra.main(config_path="conf", config_name="config", version_base=None)
 def main(cfg: DictConfig):
@@ -87,15 +119,37 @@ def main(cfg: DictConfig):
     output_dir = os.getcwd()
     logger.info(f"Outputs will be saved to: {output_dir}")
 
-    # Example data
-    sequences = ["ACGTACGTACGT", "CGTACGTAGCTA", "TGCATGCACTGA"]
-    labels = [0, 1, 0]  # Binary labels for classification
+    # Load project configuration
+    gconfig = load_config('conf/download_config.yml')
+    # Initialize tokenizer and dataloader
+    tokenizer = NTLevelTokenizer()
+    dataloader = create_genomic_dataloader(gconfig, tokenizer)
+    counter = 0
 
-    tokenizer, model = load_model(model_name="zhihan1996/DNA_bert_6", num_labels=2)
-    dataset = DNADataset(sequences, labels, tokenizer, k=6)
-    dataloader = DataLoader(dataset, batch_size=2, shuffle=True)
+    for batch in dataloader:
+        counter += 1
+        sample_seqs, ref_seqs, phenotypes, exon_masks, rep_masks, positions, chroms = batch
+        # sample_seqs: [batch_size, chunk_size]
+        # phenotypes: [batch_size, num_phenotypes]
+        # masks and positions aligned to sequences
+        # Use these tensors for model training or evaluation
 
-    train_model(model, dataloader, epochs=3)
+        # de-tokenize sequences, since DNA BERT needs k-mers as inputs and has own tokenizing strategy
+        vocab = tokenizer.vocab
+        inverted_vocab = {v: k for k, v in vocab.items()}
+        de_tokenized_seqs = batch_tokens_to_sequences(sample_seqs, inverted_vocab)
+        labels = exon_masks.int()
+        
+        print("Round ", counter)
+        if counter == 2:
+            break
 
+        tokenizer, model = load_model(model_name="zhihan1996/DNA_bert_6", num_labels=2)
+        dataset = DNADataset(de_tokenized_seqs, labels, tokenizer, k=6)
+        print(dataset)
+        dataloader = DataLoader(dataset, batch_size=4, shuffle=True)
+
+        #train_model(model, dataloader, epochs=3)
+    print(sample_seqs)
 if __name__ == "__main__":
     main()

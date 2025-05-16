@@ -1,4 +1,4 @@
 epochs: 100
-batch_size: 32
+batch_size: 4
 learning_rate: 2e-5
 log_every: 10
