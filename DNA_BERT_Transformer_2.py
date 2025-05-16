@@ -12,35 +12,45 @@ from tokenizer import NTLevelTokenizer
 from dataloader import create_genomic_dataloader
 
 # 1. Custom Dataset
-class DNADataset(Dataset):
-    def __init__(self, sequences, labels, tokenizer, k=6, max_len=512):
-        self.sequences = sequences
+class DNABERTBatchDataset(Dataset):
+    def __init__(self, tokenized_batch, labels, id_to_base, tokenizer, k=6, max_len=512):
+        self.tokenized_batch = tokenized_batch
         self.labels = labels
+        self.id_to_base = id_to_base
         self.tokenizer = tokenizer
         self.k = k
         self.max_len = max_len
 
+    def _detokenize(self, seq_tensor):
+        return ''.join([self.id_to_base.get(token.item(), 'N') for token in seq_tensor])
+
+    def _kmerize(self, seq):
+        return [seq[i:i+self.k] for i in range(len(seq) - self.k + 1)]
+
     def __len__(self):
-        return len(self.sequences)
+        return len(self.tokenized_batch)
 
     def __getitem__(self, idx):
-        seq = self.sequences[idx]
+        seq_tensor = self.tokenized_batch[idx]
         label = self.labels[idx]
 
-        # K-mer tokenization
-        kmers = [seq[i:i+self.k] for i in range(len(seq) - self.k + 1)]
+        nt_seq = self._detokenize(seq_tensor)
+        kmers = self._kmerize(nt_seq)
+
         encoded = self.tokenizer(
-            " ".join(kmers),
+            ' '.join(kmers),
             truncation=True,
-            padding="max_length",
+            padding='max_length',
             max_length=self.max_len,
-            return_tensors="pt"
+            return_tensors='pt'
         )
+
         return {
-            'input_ids': encoded['input_ids'].squeeze(),
-            'attention_mask': encoded['attention_mask'].squeeze(),
+            'input_ids': encoded['input_ids'].squeeze(0),
+            'attention_mask': encoded['attention_mask'].squeeze(0),
             'labels': label
         }
+
 
 # 2. Load tokenizer and model (use pre-trained DNA-BERT)
 def load_model(model_name='zhihan1996/DNA_bert_6', num_labels=2):
@@ -119,14 +129,43 @@ def main(cfg: DictConfig):
     output_dir = os.getcwd()
     logger.info(f"Outputs will be saved to: {output_dir}")
 
-    sequences = ["ACGTACGTACGT", "CGTACGTAGCTA", "TGCATGCACTGA"]
-    labels = [0, 1, 0]
+    # Load project configuration
+    gconfig = load_config('conf/download_config.yml')
+    # Initialize tokenizer and dataloader
+    tokenizer = NTLevelTokenizer()
+    dataloader = create_genomic_dataloader(gconfig, tokenizer)
+    counter = 0
+    vocab = tokenizer.vocab
+    inverted_vocab = {v: k for k, v in vocab.items()}
 
-    tokenizer, model = load_model(model_name="zhihan1996/DNA_bert_6", num_labels=2)
-    dataset = DNADataset(sequences, labels, tokenizer, k=6)
-    dataloader = DataLoader(dataset, batch_size=4, shuffle=True)
+    # Load DNA BERT tokenizer/model once
+    dna_tokenizer, model = load_model("zhihan1996/DNA_bert_6", num_labels=2)
 
-    train_model(model, dataloader, epochs=3)
+    for batch in dataloader:
+        counter += 1
+        print("Round ", counter)
+        sample_seqs, ref_seqs, phenotypes, exon_masks, rep_masks, positions, chroms = batch
+        # sample_seqs: [batch_size, chunk_size]
+        # phenotypes: [batch_size, num_phenotypes]
+        # masks and positions aligned to sequences
+        # Use these tensors for model training or evaluation
+     
+        labels = exon_masks[:, 0].long() if exon_masks.ndim > 1 else exon_masks.long()
+        wrapped_dataset = DNABERTBatchDataset(
+        tokenized_batch=sample_seqs,
+        labels=labels,
+        id_to_base=inverted_vocab,
+        tokenizer=dna_tokenizer,
+        k=6
+    )
+
+        batch_dataloader = DataLoader(wrapped_dataset, batch_size=4, shuffle=False)
+        train_model(model, batch_dataloader, epochs=3)
+
+        if counter == 2:
+            break
+
+ 
 
 if __name__ == "__main__":
     main()
