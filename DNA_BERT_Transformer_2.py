@@ -59,7 +59,8 @@ def load_model(model_name='zhihan1996/DNA_bert_6', num_labels=2):
     return tokenizer, model
 
 # 3. Training loop
-def train_model(model, dataloader, epochs=3, lr=2e-5):
+def train_model(model, dataloader, dna_tokenizer, id_to_base, epochs=3, lr=2e-5, k=6):
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
 
@@ -68,21 +69,43 @@ def train_model(model, dataloader, epochs=3, lr=2e-5):
 
     model.train()
     for epoch in range(epochs):
+        counter = 0
         total_loss = 0
         for batch in dataloader:
-            input_ids = batch['input_ids'].to(device)
-            attention_mask = batch['attention_mask'].to(device)
-            labels = batch['labels'].to(device)
+            counter += 1
+            print("Round", counter)
+            if counter == 3:
+                break
+            sample_seqs, ref_seqs, phenotypes, exon_masks, rep_masks, positions, chroms = batch
+            # sample_seqs: [batch_size, chunk_size]
+            # phenotypes: [batch_size, num_phenotypes]
+            # masks and positions aligned to sequences
+            # Use these tensors for model training or evaluation
 
-            outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
-            logits = outputs.logits 
-            loss = loss_fn(logits, labels)
+            labels = rep_masks[:, 0].long() if rep_masks.ndim > 1 else rep_masks.long()
+            wrapped_dataset = DNABERTBatchDataset(
+            tokenized_batch=sample_seqs,
+            labels=labels,
+            id_to_base=id_to_base,
+            tokenizer=dna_tokenizer,
+            k=k)
 
-            loss.backward()
-            optimizer.step()
-            optimizer.zero_grad()
+            batch_dataloader = DataLoader(wrapped_dataset, batch_size=4, shuffle=False)
 
-            total_loss += loss.item()
+            for sub_batch in batch_dataloader:
+                input_ids = sub_batch['input_ids'].to(device)
+                attention_mask = sub_batch['attention_mask'].to(device)
+                labels = sub_batch['labels'].to(device)
+
+                outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
+                logits = outputs.logits 
+                loss = loss_fn(logits, labels)
+
+                loss.backward()
+                optimizer.step()
+                optimizer.zero_grad()
+
+                total_loss += loss.item()
         print(f"Epoch {epoch+1}/{epochs} - Loss: {total_loss/len(dataloader):.4f}")
 
 def tokens_to_sequence(token_tensor, id_to_base):
@@ -135,37 +158,16 @@ def main(cfg: DictConfig):
     tokenizer = NTLevelTokenizer()
     dataloader = create_genomic_dataloader(gconfig, tokenizer)
     counter = 0
-    vocab = tokenizer.vocab
-    inverted_vocab = {v: k for k, v in vocab.items()}
+    
 
     # Load DNA BERT tokenizer/model once
     dna_tokenizer, model = load_model("zhihan1996/DNA_bert_6", num_labels=2)
 
-    for batch in dataloader:
-        counter += 1
-        print("Round ", counter)
-        sample_seqs, ref_seqs, phenotypes, exon_masks, rep_masks, positions, chroms = batch
-        # sample_seqs: [batch_size, chunk_size]
-        # phenotypes: [batch_size, num_phenotypes]
-        # masks and positions aligned to sequences
-        # Use these tensors for model training or evaluation
-     
-        labels = exon_masks[:, 0].long() if exon_masks.ndim > 1 else exon_masks.long()
-        wrapped_dataset = DNABERTBatchDataset(
-        tokenized_batch=sample_seqs,
-        labels=labels,
-        id_to_base=inverted_vocab,
-        tokenizer=dna_tokenizer,
-        k=6
-    )
+    vocab = tokenizer.vocab
+    id_to_base = {v: k for k, v in vocab.items()}
 
-        batch_dataloader = DataLoader(wrapped_dataset, batch_size=4, shuffle=False)
-        train_model(model, batch_dataloader, epochs=3)
+    train_model(model, dataloader, dna_tokenizer, id_to_base, epochs=3)
 
-        if counter == 2:
-            break
-
- 
 
 if __name__ == "__main__":
     main()
