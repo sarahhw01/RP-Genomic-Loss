@@ -82,7 +82,7 @@ def train_model(model, dataloader, dna_tokenizer, id_to_base, epochs=3, lr=2e-5,
             # masks and positions aligned to sequences
             # Use these tensors for model training or evaluation
 
-            labels = rep_masks[:, 0].long() if rep_masks.ndim > 1 else rep_masks.long()
+            labels = exon_masks[:, 0].long() if exon_masks.ndim > 1 else exon_masks.long()
             wrapped_dataset = DNABERTBatchDataset(
             tokenized_batch=sample_seqs,
             labels=labels,
