@@ -10,6 +10,7 @@ from torch.optim import AdamW
 from utils import load_config  # pointing to conf/download_conf.yml
 from tokenizer import NTLevelTokenizer
 from dataloader import create_genomic_dataloader
+from torch.utils.tensorboard import SummaryWriter
 
 # 1. Custom Dataset
 class DNADataset(Dataset):
@@ -49,7 +50,9 @@ def load_model(model_name='zhihan1996/DNA_bert_6', num_labels=2):
     return tokenizer, model
 
 # 3. Training loop
-def train_model(model, dataloader, epochs=3, lr=2e-5):
+def train_model(model, dataloader, epochs=3, lr=2e-5, log_dir='runs/dnabert_experiment'):
+    writer = SummaryWriter(log_dir=log_dir)
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
 
@@ -73,7 +76,11 @@ def train_model(model, dataloader, epochs=3, lr=2e-5):
             optimizer.zero_grad()
 
             total_loss += loss.item()
+        avg_loss = total_loss/len(dataloader)
+        writer.add_scalar("Loss/train", avg_loss, epoch)
         print(f"Epoch {epoch+1}/{epochs} - Loss: {total_loss/len(dataloader):.4f}")
+    # close writer
+    writer.close()
 
 def tokens_to_sequence(token_tensor, id_to_base):
     """
@@ -126,7 +133,9 @@ def main(cfg: DictConfig):
     dataset = DNADataset(sequences, labels, tokenizer, k=6)
     dataloader = DataLoader(dataset, batch_size=4, shuffle=True)
 
-    train_model(model, dataloader, epochs=3)
+    log_dir = os.path.join(os.getcwd(), "tensorboard_logs")
+
+    train_model(model, dataloader, epochs=3, log_dir=log_dir)
 
 if __name__ == "__main__":
     main()

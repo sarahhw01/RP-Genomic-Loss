@@ -13,3 +13,4 @@ dependencies:
     - pandas
     - pysam
     - intervaltree
+    - torch-tb-profiler

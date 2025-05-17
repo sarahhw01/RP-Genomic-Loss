@@ -1,0 +1,22 @@
+Collecting torch-tb-profiler
+  Downloading torch_tb_profiler-0.4.3-py3-none-any.whl.metadata (1.4 kB)
+Requirement already satisfied: pandas>=1.0.0 in /opt/anaconda3/envs/default-transformer-env/lib/python3.10/site-packages (from torch-tb-profiler) (2.2.3)
+Requirement already satisfied: tensorboard!=2.1.0,>=1.15 in /opt/anaconda3/envs/default-transformer-env/lib/python3.10/site-packages (from torch-tb-profiler) (2.19.0)
+Requirement already satisfied: numpy>=1.22.4 in /opt/anaconda3/envs/default-transformer-env/lib/python3.10/site-packages (from pandas>=1.0.0->torch-tb-profiler) (2.2.5)
+Requirement already satisfied: python-dateutil>=2.8.2 in /opt/anaconda3/envs/default-transformer-env/lib/python3.10/site-packages (from pandas>=1.0.0->torch-tb-profiler) (2.9.0.post0)
+Requirement already satisfied: pytz>=2020.1 in /opt/anaconda3/envs/default-transformer-env/lib/python3.10/site-packages (from pandas>=1.0.0->torch-tb-profiler) (2025.2)
+Requirement already satisfied: tzdata>=2022.7 in /opt/anaconda3/envs/default-transformer-env/lib/python3.10/site-packages (from pandas>=1.0.0->torch-tb-profiler) (2025.2)
+Requirement already satisfied: six>=1.5 in /opt/anaconda3/envs/default-transformer-env/lib/python3.10/site-packages (from python-dateutil>=2.8.2->pandas>=1.0.0->torch-tb-profiler) (1.17.0)
+Requirement already satisfied: absl-py>=0.4 in /opt/anaconda3/envs/default-transformer-env/lib/python3.10/site-packages (from tensorboard!=2.1.0,>=1.15->torch-tb-profiler) (2.2.0)
+Requirement already satisfied: grpcio>=1.48.2 in /opt/anaconda3/envs/default-transformer-env/lib/python3.10/site-packages (from tensorboard!=2.1.0,>=1.15->torch-tb-profiler) (1.71.0)
+Requirement already satisfied: markdown>=2.6.8 in /opt/anaconda3/envs/default-transformer-env/lib/python3.10/site-packages (from tensorboard!=2.1.0,>=1.15->torch-tb-profiler) (3.8)
+Requirement already satisfied: packaging in /opt/anaconda3/envs/default-transformer-env/lib/python3.10/site-packages (from tensorboard!=2.1.0,>=1.15->torch-tb-profiler) (25.0)
+Requirement already satisfied: protobuf in /opt/anaconda3/envs/default-transformer-env/lib/python3.10/site-packages (from tensorboard!=2.1.0,>=1.15->torch-tb-profiler) (5.29.3)
+Requirement already satisfied: setuptools>=41.0.0 in /opt/anaconda3/envs/default-transformer-env/lib/python3.10/site-packages (from tensorboard!=2.1.0,>=1.15->torch-tb-profiler) (78.1.1)
+Requirement already satisfied: tensorboard-data-server<0.8.0,>=0.7.0 in /opt/anaconda3/envs/default-transformer-env/lib/python3.10/site-packages (from tensorboard!=2.1.0,>=1.15->torch-tb-profiler) (0.7.0)
+Requirement already satisfied: werkzeug>=1.0.1 in /opt/anaconda3/envs/default-transformer-env/lib/python3.10/site-packages (from tensorboard!=2.1.0,>=1.15->torch-tb-profiler) (3.1.3)
+Requirement already satisfied: MarkupSafe>=2.1.1 in /opt/anaconda3/envs/default-transformer-env/lib/python3.10/site-packages (from werkzeug>=1.0.1->tensorboard!=2.1.0,>=1.15->torch-tb-profiler) (3.0.2)
+Downloading torch_tb_profiler-0.4.3-py3-none-any.whl (1.1 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.1/1.1 MB 1.0 MB/s eta 0:00:00
+Installing collected packages: torch-tb-profiler
+Successfully installed torch-tb-profiler-0.4.3
