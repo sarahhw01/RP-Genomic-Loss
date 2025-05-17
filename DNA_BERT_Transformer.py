@@ -72,13 +72,8 @@ def train_model(model, dataloader, dna_tokenizer, id_to_base, epochs=3, lr=2e-5,
 
     model.train()
     for epoch in range(epochs):
-        counter = 0
         total_loss = 0
         for batch in dataloader:
-            counter += 1
-            print("Round", counter)
-            if counter == 20:
-                break
             sample_seqs, ref_seqs, phenotypes, exon_masks, rep_masks, positions, chroms = batch
             # sample_seqs: [batch_size, chunk_size]
             # phenotypes: [batch_size, num_phenotypes]
