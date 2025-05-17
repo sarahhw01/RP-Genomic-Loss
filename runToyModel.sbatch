@@ -32,6 +32,7 @@
 #SBATCH --mail-user=sarah.huewels@uni-tuebingen.de
 # your mail address
 
+source /etc/profile
 # Lade Module (optional)
 module load anaconda3
 
