@@ -8,18 +8,22 @@ The `/download` folder contains utilities to fetch and prepare reference and ann
 
 ### Download Reference Genome
 ```bash
-python download/download_reference.py --config conf/download_conf.yml
+python download/download_reference.py --config conf/download_config.yml
 ```
 - Downloads `hg38.fa.gz`, decompresses and indexes to `reference/hg38.fa` and `reference/hg38.fa.fai`.
 
 ### Download and Process Annotations
 ```bash
-python download/download_annotations.py --config conf/download_conf.yml
+python download/download_annotations.py --config conf/download_config.yml
 ```
 - Downloads GENCODE GTF and RepeatMasker tracks.
 - Generates BED files: `reference/hg38_exons.bed` and `reference/hg38_repeats.bed`.
 - Sorts, compresses (`.gz`) and indexes (`.tbi`) each BED file.
 
+### Download and Process 1000g
+```bash
+python download/download_1000g.py --config conf/download_config.yml
+```
 
 ## Testing the Dataloader
 
