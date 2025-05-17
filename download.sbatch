@@ -1,6 +1,6 @@
 #!/bin/sh
 
-#SBATCH --job-name=TestJob
+#SBATCH --job-name=download_data
 
 #resources:
 
