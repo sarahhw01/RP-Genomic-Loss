@@ -32,6 +32,6 @@
 #SBATCH --mail-user=sarah.huewels@uni-tuebingen.de
 # your mail address
 
-singularity exec --nv /common/singularityImages/TCML-CUDA12_4_TF2_17_PT_2_4.simg python3 DNA_BERT_Transformer_Toy_Example.py
+singularity exec --nv TransformerContainer.sif python3 DNA_BERT_Transformer_Toy_Example.py
 
 echo DONE!
