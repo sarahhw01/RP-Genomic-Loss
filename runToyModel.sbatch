@@ -32,11 +32,6 @@
 #SBATCH --mail-user=sarah.huewels@uni-tuebingen.de
 # your mail address
 
-source /etc/profile
-# Lade Module (optional)
-module load anaconda3
-
-# Aktiviere deine Conda-Umgebung
-source activate env/default_transformer.yaml
+singularity exec --nv /common/singularityImages/TCML-CUDA12_4_TF2_17_PT_2_4.simg python3 ~/DNA_BERT_Transformer_Toy_Example.py
 
 echo DONE!
